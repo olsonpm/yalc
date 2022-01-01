@@ -1,5 +1,9 @@
 # Yalc changelog
 
+## 1.0.0.pre.53.1 (Unreleased)
+
+- add .yalc directory to published contents regardless of package.json -> 'files'
+
 ## 1.0.0.pre.53 (2021-04-28)
 
 - support ^/~/\* workspace package resolution while publish

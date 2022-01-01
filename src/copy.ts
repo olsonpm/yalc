@@ -1,8 +1,9 @@
 import crypto from 'crypto'
 import fs from 'fs-extra'
+import glob from 'glob'
 import ignore from 'ignore'
 import npmPacklist from 'npm-packlist'
-import { dirname, join } from 'path'
+import { dirname, join, sep } from 'path'
 
 import { readIgnoreFile, readPackageManifest, readSignatureFile } from '.'
 import {
@@ -13,6 +14,22 @@ import {
 } from '.'
 
 const shortSignatureLength = 8
+
+const alreadyHasYalc = (files: string[]) =>
+  !!files.find((f) => f.startsWith('.yalc' + sep))
+
+const getYalcDirFiles = (workingDir: string) =>
+  new Promise<string[]>((resolve, reject) => {
+    glob('.yalc/**/*', { cwd: workingDir, nodir: true }, (err, files) => {
+      if (err) reject(err)
+      else resolve(files)
+    })
+  })
+
+const fileExists = (fpath: string) =>
+  new Promise((resolve, reject) => {
+    fs.access(fpath, (err: Error) => resolve(!err))
+  })
 
 export const getFileHash = (srcPath: string, relPath: string = '') => {
   return new Promise<string>(async (resolve, reject) => {
@@ -148,9 +165,11 @@ export const copyPackageToStore = async (options: {
   const ignoreFileContent = readIgnoreFile(workingDir)
 
   const ignoreRule = ignore().add(ignoreFileContent)
-  const npmList: string[] = await (await npmPacklist({ path: workingDir })).map(
-    fixScopedRelativeName
-  )
+  const files = await npmPacklist({ path: workingDir })
+  const addYalcDir =
+    !alreadyHasYalc(files) && (await fileExists(join(workingDir, '.yalc')))
+  if (addYalcDir) files.push(...(await getYalcDirFiles(workingDir)))
+  const npmList: string[] = files.map(fixScopedRelativeName)
 
   const filesToCopy = npmList.filter((f) => !ignoreRule.ignores(f))
   if (options.files) {
@@ -160,6 +179,7 @@ export const copyPackageToStore = async (options: {
     })
     console.info(`Total ${filesToCopy.length} files.`)
   }
+
   const copyFilesToStore = async () => {
     await fs.remove(storePackageStoreDir)
     return Promise.all(
