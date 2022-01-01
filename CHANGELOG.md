@@ -1,6 +1,6 @@
 # Yalc changelog
 
-## 1.0.0.pre.53.1 (Unreleased)
+## 1.0.0.pre.53.1 (2022-01-01)
 
 - add .yalc directory to published contents regardless of package.json -> 'files'
 
